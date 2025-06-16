@@ -12,9 +12,11 @@ declare global {
 
 interface TaskCompletionChartProps {
   tasks: ToDoTask[]
+  startDate: Date
+  endDate: Date
 }
 
-export function TaskCompletionChart({ tasks }: TaskCompletionChartProps) {
+export function TaskCompletionChart({ tasks, startDate, endDate }: TaskCompletionChartProps) {
   const chartRef = useRef<HTMLCanvasElement>(null)
   const chartInstanceRef = useRef<any>(null)
 
@@ -43,30 +45,26 @@ export function TaskCompletionChart({ tasks }: TaskCompletionChartProps) {
         chartInstanceRef.current.destroy()
       }
 
-      // Prepare data for the last 7 days
-      const last7Days = []
-      const today = new Date()
-
-      for (let i = 6; i >= 0; i--) {
-        const date = new Date(today)
-        date.setDate(date.getDate() - i)
-        last7Days.push(date)
+      // Generate 7 days from startDate
+      const chartDays = []
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate)
+        date.setDate(date.getDate() + i)
+        chartDays.push(date)
       }
 
-      // Calculate daily statistics
-      const dailyStats = last7Days.map((date) => {
+      // Calculate daily statistics for the selected period
+      const dailyStats = chartDays.map((date) => {
         const dayStart = new Date(date)
         dayStart.setHours(0, 0, 0, 0)
         const dayEnd = new Date(date)
         dayEnd.setHours(23, 59, 59, 999)
 
-              const tasksCreated = tasks.filter((task) =>
-        new Date(task.created) >= dayStart && new Date(task.created) <= dayEnd
-      ).length
+        const tasksCreated = tasks.filter((task) => new Date(task.created).getDate() >= dayStart.getDate() && new Date(task.created).getDate() <= dayEnd.getDate()).length
 
-      const tasksCompleted = tasks.filter((task) =>
-        task.isCompleted && new Date(task.updatedOn) >= dayStart && new Date(task.updatedOn) <= dayEnd
-      ).length
+             const tasksCompleted = tasks.filter((task) =>
+        task.isCompleted && new Date(task.updatedOn).getDate() >= dayStart.getDate() && new Date(task.updatedOn).getDate() <= dayEnd.getDate()).length
+
 
         return {
           date: date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }),
@@ -118,7 +116,14 @@ export function TaskCompletionChart({ tasks }: TaskCompletionChartProps) {
           plugins: {
             title: {
               display: true,
-              text: "Daily Task Activity (Last 7 Days)",
+              text: `Task Activity - ${startDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })} to ${endDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}`,
               font: {
                 size: 16,
                 weight: "bold",
@@ -198,15 +203,20 @@ export function TaskCompletionChart({ tasks }: TaskCompletionChartProps) {
         chartInstanceRef.current.destroy()
       }
     }
-  }, [tasks])
+  }, [tasks, startDate, endDate])
 
-  // Calculate summary stats
-  const totalCreated = tasks.length
-  const totalCompleted = tasks.filter((task) => task.isCompleted).length
+  // Calculate summary stats for the selected period
+  const periodTasks = tasks.filter((task) => new Date(task.created).getDate() >= startDate.getDate() && new Date(task.created).getDate() <= endDate.getDate())
+  const periodCompleted = tasks.filter(
+    (task) => task.isCompleted &&  new Date(task.updatedOn).getDate() >= startDate.getDate() &&  new Date(task.updatedOn).getDate() <= endDate.getDate(),
+  )
+
+  const totalCreated = periodTasks.length
+  const totalCompleted = periodCompleted.length
   const completionRate = totalCreated > 0 ? Math.round((totalCompleted / totalCreated) * 100) : 0
 
   return (
-    <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
+    <div className="bg-white rounded-lg p-6 shadow-sm ">
       <div className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <h2 className="text-lg font-semibold text-gray-900">Task Completion Trends</h2>
@@ -218,10 +228,10 @@ export function TaskCompletionChart({ tasks }: TaskCompletionChartProps) {
         </div>
         <div className="flex gap-6 text-sm text-gray-600">
           <span>
-            Total Created: <span className="font-medium text-blue-600">{totalCreated}</span>
+            Created in Period: <span className="font-medium text-blue-600">{totalCreated}</span>
           </span>
           <span>
-            Total Completed: <span className="font-medium text-green-600">{totalCompleted}</span>
+            Completed in Period: <span className="font-medium text-green-600">{totalCompleted}</span>
           </span>
         </div>
       </div>
@@ -231,7 +241,7 @@ export function TaskCompletionChart({ tasks }: TaskCompletionChartProps) {
       </div>
 
       <div className="mt-4 text-xs text-gray-500 text-center">
-        Track your daily productivity and task completion patterns over time
+        Track your productivity and task completion patterns for the selected 7-day period
       </div>
     </div>
   )

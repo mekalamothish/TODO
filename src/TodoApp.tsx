@@ -8,6 +8,7 @@ import { TaskItem } from "./Components/TaskItem"
 import { TaskStats } from "./Components/TaskStats"
 import { TaskFilters } from "./Components/TaskFilters"
 import { TaskCompletionChart } from "./Components/TaskCompletionChart"
+import { DateRangePicker } from "./Components/DateRangePicker"
 
 interface ToDoAppProbs{
   searchTerm :string;
@@ -16,6 +17,14 @@ export default function TodoApp({searchTerm}:ToDoAppProbs) {
   const [tasks, setTasks] = useState<ToDoTask[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "active" | "completed" | "overdue">("all")
+
+    // Chart date range state - default to last 7 days
+  const [chartStartDate, setChartStartDate] = useState(() => {
+    const date = new Date()
+    date.setDate(date.getDate() - 6)
+    return date
+  })
+const [chartEndDate, setChartEndDate] = useState(new Date())
 
   const loadTasks = async () => {
     setIsLoading(true)
@@ -56,6 +65,10 @@ export default function TodoApp({searchTerm}:ToDoAppProbs) {
     setTasks((prev) =>
       prev.map((task) => (task.id === id ? { ...task, isCompleted: status, UpdatedOn: new Date() } : task)),
     )
+  }
+    const handleDateRangeChange = (startDate: Date, endDate: Date) => {
+    setChartStartDate(startDate)
+    setChartEndDate(endDate)
   }
    let filteredTasks = tasks.filter((task) =>
     task.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -146,8 +159,16 @@ export default function TodoApp({searchTerm}:ToDoAppProbs) {
         </div>
         </div>
         <div className="sm:w-1/2 w-full">
-        {/* Task Completion Chart */}
-        <TaskCompletionChart tasks={tasks} />
+       {/* Chart Section with Date Range Picker */}
+        <div className="bg-white rounded-lg p-6 shadow-sm mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Analytics Dashboard</h2>
+            <DateRangePicker startDate={chartStartDate} onDateRangeChange={handleDateRangeChange} />
+          </div>
+          <div className="bg-gray-50 rounded-lg p-1">
+            <TaskCompletionChart tasks={tasks} startDate={chartStartDate} endDate={chartEndDate} />
+          </div>
+        </div>
         </div>
         </div>
     </div> 
